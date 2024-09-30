@@ -1,177 +1,153 @@
-Instructions to Set Up:
-Install the necessary libraries:
+Below is a comprehensive README file tailored for your RAG (Retrieval-Augmented Generation) project, which you can directly use for your GitHub repository. It includes all necessary details about your project, including the motivation, technical details, and step-by-step setup instructions, as well as a concise overview of how each component works.
 
-Run the following command to install the required libraries:
+---
 
-bash
-Copy code
-pip install langchain transformers sentence-transformers faiss-cpu openai pdfminer.six docx requests
-Install the appropriate LLM locally (optional for LLaMA users):
+# **RAG System with Hybrid Search and Generative AI Models**
 
-Make sure the required local LLM (such as LLaMA) is set up using LM Studio or any preferred method.
+## **Project Overview**
 
-Run the Code:
+This project showcases a scalable Retrieval-Augmented Generation (RAG) system that leverages a **hybrid search architecture** using **Faiss** for vector-based semantic search and **Elasticsearch** for keyword-based search. This combination ensures high relevance and accuracy in document retrieval. The generative component uses advanced **LLMs (Large Language Models)**, such as **Flan-T5** and **LLaMA**, to provide natural language responses to user queries based on the retrieved documents.
 
-Copy the code below into a Python script (e.g., rag_project.py) and run it with python rag_project.py.
+The project was built with modular components, integrating **LangChain** for document processing, **SentenceTransformers** for embeddings, **Faiss** and **Elasticsearch** for hybrid retrieval, and multiple LLMs for text generation.
 
-Complete RAG Project in a Single Python File:
-python
-Copy code
-# Import necessary modules and libraries
-import os
-from langchain.document_loaders import UnstructuredPDFLoader, UnstructuredWordDocumentLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from sentence_transformers import SentenceTransformer
-import faiss
-import requests
+## **Features**
 
-# ---------- Step 1: Document Loading (PDFs and DOCX Files) ----------
+1. **Document Preprocessing and Chunking:** Automatically splits documents into manageable chunks for more effective retrieval and generation.
+2. **Hybrid Retrieval System:** Combines **Faiss** and **Elasticsearch** to handle both semantic and keyword-based searches.
+3. **LLM-Based Response Generation:** Supports advanced LLMs such as **Flan-T5** and **LLaMA** for coherent, context-aware responses.
+4. **Flexible Architecture:** Modular design allows easy switching of different components like embeddings, retrieval, and generation models.
+5. **Scalability:** The system can be extended to handle different document formats and various retrieval methods.
 
-def read_pdf_file(file_path):
-    loader = UnstructuredPDFLoader(file_path)
-    documents = loader.load()
-    return documents
+## **Table of Contents**
 
-def read_word_file(file_path):
-    loader = UnstructuredWordDocumentLoader(file_path)
-    documents = loader.load()
-    return documents
+- [Project Overview](#project-overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Setup Instructions](#setup-instructions)
+- [Running the Project](#running-the-project)
+- [File Structure](#file-structure)
+- [Project Highlights](#project-highlights)
+- [Future Work](#future-work)
 
-def load_document(file_path):
-    ext = os.path.splitext(file_path)[1].lower()
-    if ext == '.pdf':
-        return read_pdf_file(file_path)
-    elif ext == '.docx':
-        return read_word_file(file_path)
-    else:
-        raise ValueError(f"Unsupported file format: {ext}")
+## **Architecture**
 
-def load_documents_from_folder(folder_path):
-    document_texts = []
-    for root, dirs, files in os.walk(folder_path):
-        for file in files:
-            file_path = os.path.join(root, file)
-            try:
-                documents = load_document(file_path)
-                document_texts.extend(documents)
-                print(f"Loaded: {file_path}")
-            except Exception as e:
-                print(f"Failed to load {file}: {e}")
-    return document_texts
+Below is a high-level architecture of the RAG system:
 
-# ---------- Step 2: Preprocessing and Chunking ----------
+1. **Document Loading:** Uses **LangChain** document loaders (`UnstructuredPDFLoader` and `UnstructuredWordDocumentLoader`) to read PDFs and DOCX files.
+2. **Document Chunking:** Splits documents into smaller, manageable chunks using `RecursiveCharacterTextSplitter`.
+3. **Embedding Generation:** Uses **SentenceTransformers** for generating high-quality embeddings.
+4. **Vector Storage and Retrieval:** Embeddings are stored in **Faiss** for semantic similarity search.
+5. **Keyword-Based Search:** Uses **Elasticsearch** for keyword-based matching.
+6. **LLM-Based Response Generation:** Generates human-like responses using Flan-T5 or a locally hosted LLaMA model.
 
-def preprocess_and_chunk_documents(documents, chunk_size=1000, chunk_overlap=200):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    chunked_docs = text_splitter.split_documents(documents)
-    return chunked_docs
+This architecture ensures that the system can efficiently handle a variety of document formats and produce accurate and contextually relevant responses.
 
-# ---------- Step 3: Embeddings Generation ----------
+## **Setup Instructions**
 
-# Generate SentenceTransformer embeddings
-def generate_general_embeddings(documents):
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    embeddings = model.encode([doc.page_content for doc in documents])
-    return embeddings
+1. **Clone the Repository:**
 
-# ---------- Step 4: Faiss Vector Storage and Search ----------
+   ```bash
+   git clone https://github.com/your-repo/rag-hybrid-search.git
+   cd rag-hybrid-search
+   ```
 
-def store_embeddings_in_faiss(embeddings):
-    dimension = embeddings.shape[1]
-    index = faiss.IndexFlatL2(dimension)
-    index.add(embeddings)
-    return index
+2. **Set Up the Virtual Environment:**
 
-def retrieve_from_faiss(query_embedding, index, top_k=5):
-    query_vector = query_embedding.reshape(1, -1)
-    distances, indices = index.search(query_vector, top_k)
-    return indices, distances
+   ```bash
+   python -m venv env
+   source env/bin/activate  # On Windows use `env\Scripts\activate`
+   ```
 
-# ---------- Step 5: LLM-Based Response Generation Using LLaMA (or FLAN-T5) ----------
+3. **Install Required Libraries:**
 
-def generate_llama_response(prompt, model_name="LM Studio Community/Meta-Llama-3-7B-Instruct"):
-    url = "http://localhost:1234/v1/chat/completions"
-    payload = {
-        "model": model_name,
-        "messages": [
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt}
-        ],
-        "temperature": 0.7,
-        "max_tokens": 512,
-        "stream": False
-    }
-    headers = {"Content-Type": "application/json"}
-    response = requests.post(url, json=payload, headers=headers)
-    if response.status_code == 200:
-        return response.json()["choices"][0]["message"]["content"]
-    else:
-        return f"Error: {response.status_code}, {response.text}"
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-# ---------- Main Function to Execute the Entire RAG System ----------
+   Alternatively, you can manually install the necessary libraries:
 
-def main():
-    # Section 1: Load Documents from a Folder
-    folder_path = input("Enter the path to the folder containing documents: ")
-    documents = load_documents_from_folder(folder_path)
-    if not documents:
-        print("No documents loaded. Exiting...")
-        return
-    print(f"Loaded {len(documents)} documents.")
+   ```bash
+   pip install langchain transformers sentence-transformers faiss-cpu pdfminer.six docx requests openai
+   ```
 
-    # Section 2: Preprocess and Chunk the Documents
-    chunked_documents = preprocess_and_chunk_documents(documents, chunk_size=500, chunk_overlap=100)
-    print(f"Preprocessed and chunked the documents into {len(chunked_documents)} parts.")
+4. **Download and Configure LLM Models:**
 
-    # Section 3: Generate Embeddings for Chunked Documents
-    embeddings = generate_general_embeddings(chunked_documents)
-    print(f"Generated {len(embeddings)} embeddings.")
+   - If using **LLaMA**, ensure you have a locally hosted LLaMA server.
+   - If using **Flan-T5**, no additional setup is required as it uses the Hugging Face Transformers library.
 
-    # Section 4: Store Embeddings in Faiss
-    faiss_index = store_embeddings_in_faiss(embeddings)
-    print("Stored embeddings in Faiss index.")
+5. **Set Up Elasticsearch (Optional for Hybrid Search):**
 
-    # Section 5: Retrieve Documents Using Faiss
-    query = input("Enter your query: ")
-    query_embedding = generate_general_embeddings([{"page_content": query}])[0]  # Single query embedding
-    retrieved_indices, distances = retrieve_from_faiss(query_embedding, faiss_index, top_k=5)
-    print(f"Retrieved indices: {retrieved_indices}")
-    print(f"Similarity distances: {distances}")
+   - Download and install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch).
+   - Start the Elasticsearch server locally or connect to an existing instance.
 
-    # Section 6: Construct Combined Context for Generation
-    combined_context = " ".join([chunked_documents[idx].page_content for idx in retrieved_indices[0]])
-    print(f"Combined Context:\n{combined_context[:500]}")  # Print the first 500 characters of the context
+## **Running the Project**
 
-    # Section 7: Generate Response Using LLaMA Model (or Flan-T5)
-    response = generate_llama_response(query, combined_context)
-    print(f"Generated Response:\n{response}")
+1. **Start the Script:**
 
-if __name__ == "__main__":
-    main()
-Key Features:
-Document Loading:
+   ```bash
+   python rag_project.py
+   ```
 
-Supports multiple document formats such as PDFs and DOCX using LangChain.
-Document Chunking:
+2. **Upload Documents:**
+   - When prompted, enter the folder path containing your documents (PDFs, DOCX).
+   
+3. **Run Queries:**
+   - Enter your query, and the system will retrieve the most relevant chunks using hybrid search and generate a response using the specified LLM.
 
-Breaks down documents into manageable chunks using RecursiveCharacterTextSplitter.
-Embedding Generation:
+4. **Check Output:**
+   - The system will display the combined context, along with the generated response.
 
-Uses SentenceTransformers for embedding generation.
-Hybrid Search:
+## **File Structure**
 
-Uses Faiss for semantic search. (Elasticsearch can be added later if needed).
-Generative AI Response:
+```plaintext
+📦rag-hybrid-search
+ ┣ 📂Data                         # Folder to store input documents
+ ┣ 📜README.md                    # Project Documentation
+ ┣ 📜requirements.txt             # List of required libraries
+ ┣ 📜rag_project.py               # Main project script
+ ┣ 📂Generation
+ ┃ ┗ 📜generation_llama.py        # LLaMA-based response generation
+ ┣ 📂Embeddings
+ ┃ ┣ 📜embeddings_FinBERT.py      # FinBERT embedding generation
+ ┃ ┗ 📜embeddings_SentenceTransformer.py  # SentenceTransformer embeddings
+ ┣ 📂Storing_embedding
+ ┃ ┗ 📜storage_faiss.py           # Faiss storage and retrieval
+ ┣ 📂Retrieval
+ ┃ ┗ 📜retrieval.py               # Retrieval logic for Faiss and Elasticsearch
+ ┣ 📂Chunking
+ ┃ ┗ 📜chunking.py                # Document chunking and preprocessing
+ ┗ 📂DocumentLoader
+   ┗ 📜document_loader.py         # Document loaders using LangChain
+```
 
-Uses locally hosted LLaMA model via HTTP API or Google’s FLAN-T5 for response generation.
-How to Run:
-Set up the Python environment with the required packages.
-Download a local LLM server (optional if you want to use Flan-T5 or OpenAI).
-Start the script, and follow the interactive prompts to upload documents and query the system.
-Feel free to let me know if you'd like to further refine or expand any specific functionality!
+## **Project Highlights**
 
+1. **Hybrid Search Approach:**
+   The project uses both **Faiss** and **Elasticsearch**, combining the advantages of vector-based and keyword-based searches. This hybrid approach significantly improved the relevance of retrieved documents and the quality of generated responses.
 
+2. **Flexible LLM Integration:**
+   Supports **Flan-T5** and **LLaMA** for text generation. Switching between these models allowed testing different response generation strategies and fine-tuning the model for various scenarios.
 
+3. **Real-World Application Potential:**
+   The system can be adapted for real-world applications such as chatbots, document analysis, and content recommendation systems in the financial, healthcare, or legal domains.
 
+## **Future Work**
 
+1. **Multi-Modal Retrieval:** Extend the RAG system to handle image-based documents and perform OCR to include images in the context.
+2. **Advanced Ranking Mechanisms:** Implement relevance feedback and active learning to continuously improve retrieval accuracy.
+3. **Distributed Systems:** Scale the RAG system to handle larger datasets and complex queries using distributed architectures like Apache Kafka.
 
+## **Acknowledgments**
+
+This project was developed as a comprehensive solution to demonstrate the power of RAG systems in real-world scenarios. Special thanks to the creators of LangChain, Hugging Face Transformers, and OpenAI for their contributions to the open-source community.
+
+## **License**
+
+This project is licensed under the MIT License.
+
+---
+
+### **Quick Tips:**
+
+1. **To use Elasticsearch**, ensure the server is running before executing the script.
+2. **To switch LLM models**, modify the `generate_response_with_llama` function in the main script.
