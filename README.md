@@ -141,9 +141,6 @@ This architecture ensures that the system can efficiently handle a variety of do
 
 This project was developed as a comprehensive solution to demonstrate the power of RAG systems in real-world scenarios. Special thanks to the creators of LangChain, Hugging Face Transformers, and OpenAI for their contributions to the open-source community.
 
-## **License**
-
-This project is licensed under the MIT License.
 
 ---
 
